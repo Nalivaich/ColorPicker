@@ -18,6 +18,7 @@
     width: 55px;
     color:#FFFFFF;
     background-color: #000000;
+
 }
 
 
@@ -57,7 +58,7 @@
 
 #left_block {
     background-color: #E15D42;
-    height: 200px;
+    height: 197px;
     width: 200px;
     float: right;
     margin: 0;
@@ -93,4 +94,12 @@
 #footer input:hover {
     background-color: #000;
     color: #fff;
+}
+
+.choose_color_block {
+    height: 12.8px;
+    width: 12.5px;
+    //display:inline-block;
+    float:left;
+
 }
