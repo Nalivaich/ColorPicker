@@ -50,7 +50,7 @@
     display: none;
 }
 
-#left_block {
+.left_block {
     background-color: #fff;
     height: 192px;
     width: 198px;
@@ -58,7 +58,7 @@
     margin: 0;
 }
 
-#right_block {
+.right_block {
     height:200px;
     margin: 0;
     width: 99px;
@@ -70,12 +70,12 @@
     margin: 10px 0 10px 10px;
 }
 
-#footer {
+.footerPicker {
     width: auto;
     height: 30px;
 }
 
-#footer input {
+.footerPicker input {
     display: inline-block;
     float: right;
     margin: 13px;
@@ -83,7 +83,7 @@
     height:25px;
 }
 
-#footer input:hover {
+.footerPicker input:hover {
     background-color: #000;
     color: #fff;
 }

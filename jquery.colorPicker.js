@@ -3,6 +3,8 @@
  */
 
 (function($){
+    var colorRegex = /.*\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)/;
+
     //все переменные не затираются после отработки ф-ии
     function rgb2hex(color)
     {
@@ -12,32 +14,53 @@
     }
 
     var $template = (function () {
-        var baseForm = $('<div>');
-        baseForm.append("<div id='left_block'></div>");
+        var $right = $("<div id='right_block' class='right_block'></div>");
+        var $left = $("<div id='left_block' class='left_block'></div>");
+        var $footer = $("<div id='footerPicker' class='footerPicker'></div>");
+
+        var baseForm = $('<div>')
+            .append($left)
+            .append($right)
+            .append($footer);
 
         for(var r = 0; r < 64; r++){
             for(var g = 0; g < 16; g++) {
                 for(var b = 0; b < 4; b++) {
-                    var pp = $("<div  class='choose_color_block'></div>");
-                    pp.css('background-color', rgb2hex({red: r*4, green: g*16, blue: b*64}));
-                    baseForm.find('#left_block').append(pp);
+                    $("<div  class='choose_color_block'></div>")
+                        .css('background-color', rgb2hex({red: r*4, green: g*16, blue: b*64}))
+                        .appendTo($left);
                 }
             }
         }
-        baseForm.append("<div id='right_block'></div>");
-        baseForm.find('#right_block').append("<div id='red_value_block' class='color_block'></div>");
-        baseForm.find('#right_block').append("<div id='green_value_block' class='color_block'></div>");
-        baseForm.find('#right_block').append("<div id='blue_value_block' class='color_block'></div>");
-        baseForm.find('#right_block').append("<div id='hex_value_block' class='color_block'></div>");
-        baseForm.find('#right_block').append("<div id='show_color_block' class='color_block'></div>");
-        baseForm.find('#red_value_block').append("<label for='red_input' >R<input id='red_input' type='text' /></label>");
-        baseForm.find('#green_value_block').append("<label for='green_input'>G<input id='green_input' type='text' /></label>");
-        baseForm.find('#blue_value_block').append("<label for='blue_input'>B<input id='blue_input' type='text' /></label>");
-        baseForm.find('#hex_value_block').append("<label for='hex_input'>#<input id='hex_input' readonly='readonly' type='text' /></label>");
-        baseForm.find('#show_color_block').append("<label for='color_input'>C<input id='color_input' readonly='readonly' type='text' /></label>");
-        baseForm.append("<div id='footer'></div>");
-        baseForm.find('#footer').append("<input id='applyButton' type='button' value='Apply' class='applyButton' />");
-        baseForm.find('#footer').append("<input id='modal_close' type='button' value='Cancel' class='modal_close' />");
+
+        var inputs = [
+            { name: 'red', title: 'R' },
+            { name: 'green', title: 'G' },
+            { name: 'blue', title: 'B' },
+            { name: 'hex', title: '#', readonly: true },
+            { name: 'color', title: 'C', readonly: true }
+        ];
+
+        $.each(inputs, function (i, info) {
+           $('<div/>')
+               .attr('class',  'color_block ' + info.name + '_value_block')
+               .append($('<label>')
+                   .attr('for', info.name + '_input')
+                   .text(info.title)
+                   .append($('<input/>')
+                       .attr('class', info.name + '_input')
+                       .attr('type', 'text')
+                       .attr('readonly' , info.readonly)
+                       .attr('id', info.name + '_input')
+                    )
+                )
+           .appendTo($right);
+        });
+
+        $("<input id='applyButton' type='button' value='Apply' class='applyButton' />")
+            .appendTo($footer);
+        $("<input id='modal_close' type='button' value='Cancel' class='modal_close' />")
+            .appendTo($footer);
 
         return baseForm;
     });
@@ -49,13 +72,16 @@
             var myInput = $(this).find('input');
             var myDiv = $(this).find('div');
             var outputMode = undefined;
-            var hrgbValues = {
+
+            var currentHrgbValues = {
                 red: 0,
                 green: 0,
                 blue: 0,
                 rgbToHex: '#000',
                 hex: '#000'
             };
+
+            var oldHrgbValues = $.extend(true,currentHrgbValues);
 
             if(options) {
                 outputMode = $(this).find(options);
@@ -65,6 +91,7 @@
                 instance = Singleton.getInstance(outputMode);
                 instance.carcas.css('visibility', 'visible');
                 instance.overlay.css('visibility', 'visible');
+                setHrgbValues(oldHrgbValues,instance);
                 event.preventDefault();
                 if(myDiv) {
                     instance.carcas
@@ -78,29 +105,53 @@
                             .animate({opacity: 1, top: '50%'}, 200);
                     });
 
-                $('.applyButton').click( function() {
+                instance.carcas.find('.applyButton').click( function() {
                     hidePickerForm(instance);
-                    getHrgbValues(instance);
-                    paintInput(hrgbValues);
+                    getHrgbValues(instance, currentHrgbValues);
+                    oldHrgbValues = $.extend(true,currentHrgbValues);
+                    paintInput(currentHrgbValues);
+                    instance.carcas.find('input').off();
                 });
 
-                $('.modal_close, .overlay').click( function(){
+                instance.carcas.find('.modal_close, .overlay').click( function(){
+                    setHrgbValues(oldHrgbValues,instance);
                     hidePickerForm(instance);
+                    instance.carcas.find('input').off();
                 });
 
-                $('.choose_color_block').click( function() {
+
+
+                instance.carcas.find('.red_input, .green_input, .blue_input ').bind("keyup", function (eventObject){
+                    getHrgbValues(instance, currentHrgbValues);
+                    setHrgbValues(currentHrgbValues,instance, 1);
+                });
+
+
+
+                instance.carcas.find('.choose_color_block').click( function() {
                     var newColor = $(this).css('background-color');
-                    newColor = newColor.split(')')[0];
-                    newColor = newColor.split('(')[1];
-                    newColor = newColor.split(',');
-                    hrgbValues.red = newColor[0];
-                    hrgbValues.green = newColor[1];
-                    hrgbValues.blue = newColor[2];
-                    hrgbValues.rgbToHex = rgb2hex(hrgbValues);
-                    setHrgbValues(hrgbValues,instance);
+                    parseHrgbString(newColor , currentHrgbValues);
+                    setHrgbValues(currentHrgbValues,instance);
                 });
+
 
             });
+            /*
+            function copyObject(copyFromObject , copyToObject) {
+                for (var key in copyFromObject) {
+                    copyToObject[key] = copyFromObject[key];
+                }
+            }*/
+
+            function parseHrgbString(color, hrgbObject) {
+
+                var values = colorRegex.exec(color).splice(1);
+                hrgbObject.red = values[0];
+                hrgbObject.green = values[1];
+                hrgbObject.blue = values[2];
+                hrgbObject.rgbToHex = rgb2hex(currentHrgbValues);
+
+            }
 
             function hidePickerForm(object) {
                 object.carcas
@@ -114,18 +165,20 @@
                 );
             }
 
-            function getHrgbValues(object) {
-                hrgbValues.red = object.carcas.find('#red_input').val();
-                hrgbValues.green = object.carcas.find('#green_input').val();
-                hrgbValues.blue =object.carcas.find('#blue_input').val();
-                hrgbValues.hex = object.carcas.find('#hex_input').val();
-                hrgbValues.rgbToHex = rgb2hex(hrgbValues);
+            function getHrgbValues(object, hrgbObject) {
+                hrgbObject.red = object.carcas.find('.red_value_block input').val();
+                hrgbObject.green = object.carcas.find('.green_value_block input').val();
+                hrgbObject.blue =object.carcas.find('.blue_value_block input').val();
+                hrgbObject.hex = object.carcas.find('.hex_value_block input').val();
+                hrgbObject.rgbToHex = rgb2hex(hrgbObject);
             }
 
-            function setHrgbValues(colorObject , instanceObject) {
-                instanceObject.carcas.find('#red_input').val(colorObject.red);
-                instanceObject.carcas.find('#green_input').val(colorObject.green);
-                instanceObject.carcas.find('#blue_input').val(colorObject.blue);
+            function setHrgbValues(colorObject , instanceObject, mode) {
+                if(!mode) {
+                    instanceObject.carcas.find('#red_input').val(colorObject.red);
+                    instanceObject.carcas.find('#green_input').val(colorObject.green);
+                    instanceObject.carcas.find('#blue_input').val(colorObject.blue);
+                }
                 instanceObject.carcas.find('#hex_input').val((colorObject.rgbToHex).split('#')[1]);
                 instanceObject.carcas.find('#color_input').css('background-color' , colorObject.rgbToHex);
             }
